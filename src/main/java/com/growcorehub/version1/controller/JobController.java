@@ -1,10 +1,12 @@
 package com.growcorehub.version1.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.growcorehub.version1.entity.Job;
 import com.growcorehub.version1.service.JobService;
+import com.growcorehub.version1.service.UserService;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,31 +15,103 @@ import java.util.Optional;
 @RequestMapping("/api/jobs")
 public class JobController {
 
-	private final JobService jobService;
+    private final JobService jobService;
+    private final UserService userService;
 
-	public JobController(JobService jobService) {
-		this.jobService = jobService;
-	}
+    public JobController(JobService jobService, UserService userService) {
+        this.jobService = jobService;
+        this.userService = userService;
+    }
 
-	@GetMapping
-	public List<Job> getAllJobs() {
-		return jobService.getJobsByStatus("OPEN");
-	}
+    @GetMapping("/")
+    public List<Job> getAllJobs(@RequestParam(required = false) String status,
+                               @RequestParam(required = false) String location,
+                               @RequestParam(required = false) String search) {
+        
+        if (search != null && !search.trim().isEmpty()) {
+            return jobService.searchJobs(search);
+        }
+        
+        if (location != null && !location.trim().isEmpty()) {
+            return jobService.getJobsByLocation(location);
+        }
+        
+        return jobService.getJobsByStatus(status != null ? status : "OPEN");
+    }
 
-	@GetMapping("/{id}")
-	public ResponseEntity<Job> getJobById(@PathVariable Long id) {
-		Optional<Job> job = jobService.getJobById(id);
-		return job.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-	}
+    @GetMapping("/{id}")
+    public ResponseEntity<Job> getJobById(@PathVariable Long id) {
+        Optional<Job> job = jobService.getJobById(id);
+        return job.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
-	@PostMapping
-	public Job createJob(@RequestBody Job job) {
-		return jobService.saveJob(job);
-	}
+    @PostMapping("/")
+    public ResponseEntity<Job> createJob(@RequestBody Job job, Authentication authentication) {
+        String username = authentication.getName();
+        var user = userService.findByUsername(username);
+        
+        if (user.isPresent()) {
+            job.setCreatedBy(user.get());
+            if (job.getStatus() == null) {
+                job.setStatus("OPEN");
+            }
+            Job savedJob = jobService.saveJob(job);
+            return ResponseEntity.ok(savedJob);
+        }
+        
+        return ResponseEntity.badRequest().build();
+    }
 
-	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteJob(@PathVariable Long id) {
-		jobService.deleteJob(id);
-		return ResponseEntity.noContent().build();
-	}
+    @GetMapping("/my-jobs")
+    public ResponseEntity<List<Job>> getMyJobs(Authentication authentication) {
+        String username = authentication.getName();
+        var user = userService.findByUsername(username);
+        
+        if (user.isPresent()) {
+            List<Job> myJobs = jobService.getJobsByCreatedBy(user.get().getId());
+            return ResponseEntity.ok(myJobs);
+        }
+        
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Job> updateJob(@PathVariable Long id, @RequestBody Job jobDetails, Authentication authentication) {
+        String username = authentication.getName();
+        var user = userService.findByUsername(username);
+        
+        if (user.isPresent()) {
+            Optional<Job> existingJob = jobService.getJobById(id);
+            
+            if (existingJob.isPresent() && existingJob.get().getCreatedBy().getId().equals(user.get().getId())) {
+                Job job = existingJob.get();
+                job.setTitle(jobDetails.getTitle());
+                job.setDescription(jobDetails.getDescription());
+                job.setLocation(jobDetails.getLocation());
+                job.setStatus(jobDetails.getStatus());
+                
+                Job updatedJob = jobService.saveJob(job);
+                return ResponseEntity.ok(updatedJob);
+            }
+        }
+        
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteJob(@PathVariable Long id, Authentication authentication) {
+        String username = authentication.getName();
+        var user = userService.findByUsername(username);
+        
+        if (user.isPresent()) {
+            Optional<Job> existingJob = jobService.getJobById(id);
+            
+            if (existingJob.isPresent() && existingJob.get().getCreatedBy().getId().equals(user.get().getId())) {
+                jobService.deleteJob(id);
+                return ResponseEntity.noContent().build();
+            }
+        }
+        
+        return ResponseEntity.notFound().build();
+    }
 }
