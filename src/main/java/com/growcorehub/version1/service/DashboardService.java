@@ -13,9 +13,11 @@ import com.growcorehub.version1.dto.DashboardDTO.RecentPaymentDTO;
 import com.growcorehub.version1.dto.DashboardDTO.StatsDTO;
 import com.growcorehub.version1.dto.DashboardDTO.UserSummaryDTO;
 import com.growcorehub.version1.entity.Certification;
+import com.growcorehub.version1.entity.JobApplication;
 import com.growcorehub.version1.entity.Payment;
 import com.growcorehub.version1.entity.User;
 import com.growcorehub.version1.repository.CertificationRepository;
+import com.growcorehub.version1.repository.JobApplicationRepository;
 import com.growcorehub.version1.repository.PaymentRepository;
 import com.growcorehub.version1.repository.UserRepository;
 
@@ -25,12 +27,14 @@ public class DashboardService {
 	private final UserRepository userRepository;
 	private final CertificationRepository certificationRepository;
 	private final PaymentRepository paymentRepository;
+	private final JobApplicationRepository jobApplicationRepository;
 
 	public DashboardService(UserRepository userRepository, CertificationRepository certificationRepository,
-			PaymentRepository paymentRepository) {
+			PaymentRepository paymentRepository, JobApplicationRepository jobApplicationRepository) {
 		this.userRepository = userRepository;
 		this.certificationRepository = certificationRepository;
 		this.paymentRepository = paymentRepository;
+		this.jobApplicationRepository = jobApplicationRepository;
 	}
 
 	public DashboardDTO getDashboardData(String username) {
@@ -48,11 +52,10 @@ public class DashboardService {
 		// Stats
 		dashboard.setStats(getUserStats(username));
 
-		// Recent Jobs - Since we don't have JobApplication entity in your current
-		// setup,
-		// we'll create a simple implementation. You can enhance this later.
-		List<RecentJobDTO> recentJobs = List.of(new RecentJobDTO(1L, "Sample Job 1", "Remote", "PENDING"),
-				new RecentJobDTO(2L, "Sample Job 2", "New York", "APPLIED"));
+		// Recent Job Applications
+		List<JobApplication> applications = jobApplicationRepository.findByUserIdOrderByAppliedAtDesc(user.getId());
+		List<RecentJobDTO> recentJobs = applications.stream().limit(5).map(app -> new RecentJobDTO(app.getJob().getId(),
+				app.getJob().getTitle(), app.getJob().getLocation(), app.getStatus())).collect(Collectors.toList());
 		dashboard.setRecentJobs(recentJobs);
 
 		// Certification Progress
@@ -65,7 +68,7 @@ public class DashboardService {
 
 		// Recent Payments
 		List<Payment> payments = paymentRepository.findByUserId(user.getId());
-		List<RecentPaymentDTO> recentPayments = payments.stream().limit(5) // Get only last 5 payments
+		List<RecentPaymentDTO> recentPayments = payments.stream().limit(5)
 				.map(payment -> new RecentPaymentDTO(payment.getId(), payment.getAmount(), payment.getStatus(),
 						payment.getTransactionDate() != null
 								? payment.getTransactionDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -99,13 +102,10 @@ public class DashboardService {
 		Long completedProjects = payments.stream().filter(payment -> "COMPLETED".equals(payment.getStatus()))
 				.mapToLong(p -> 1L).sum();
 
-		// For jobs applied, we'll use a simple count for now
-		// You can replace this with actual job application count when you implement
-		// that feature
-		Long totalJobsApplied = 5L; // Placeholder - replace with actual job application count
+		// Get actual job applications count
+		Long totalJobsApplied = jobApplicationRepository.countApplicationsByUserId(user.getId());
 
 		return new StatsDTO(totalJobsApplied, totalCertifications, totalEarnings, completedProjects,
-				Math.round(avgCertificationProgress * 100.0) / 100.0 // Round to 2 decimal places
-		);
+				Math.round(avgCertificationProgress * 100.0) / 100.0);
 	}
 }
