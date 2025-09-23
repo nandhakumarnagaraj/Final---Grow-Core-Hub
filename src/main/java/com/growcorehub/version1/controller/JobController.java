@@ -19,7 +19,7 @@ public class JobController {
 		this.jobService = jobService;
 	}
 
-	@GetMapping("/")
+	@GetMapping
 	public List<Job> getAllJobs() {
 		return jobService.getJobsByStatus("OPEN");
 	}
@@ -30,7 +30,7 @@ public class JobController {
 		return job.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
-	@PostMapping("/")
+	@PostMapping
 	public Job createJob(@RequestBody Job job) {
 		return jobService.saveJob(job);
 	}
