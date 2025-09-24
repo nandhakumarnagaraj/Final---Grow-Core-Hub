@@ -2,6 +2,8 @@ package com.growcorehub.version1.entity;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,10 +21,12 @@ public class JobApplication {
 
 	@ManyToOne
 	@JoinColumn(name = "user_id", nullable = false)
+	@JsonIgnoreProperties({"password", "roles", "professionalDetails"})
 	private User user;
 
 	@ManyToOne
 	@JoinColumn(name = "job_id", nullable = false)
+	@JsonIgnoreProperties({"createdBy"})
 	private Job job;
 
 	private String status; // PENDING, APPROVED, REJECTED
