@@ -9,24 +9,36 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "jobs")
-public class Job {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+public class Job extends AuditableEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false)
-	private String title;
+    @NotBlank(message = "Job title is required")
+    @Size(min = 3, max = 200, message = "Title must be between 3 and 200 characters")
+    @Column(nullable = false)
+    private String title;
 
+	@NotBlank(message = "Job description is required")
+	@Size(min = 10, max = 5000, message = "Description must be between 10 and 5000 characters")
 	@Column(columnDefinition = "TEXT")
 	private String description;
 
+	@NotBlank(message = "Location is required")
+	@Size(max = 100, message = "Location cannot exceed 100 characters")
 	private String location;
 
-	private String status;
+    @Column(name = "status")
+    @org.hibernate.annotations.Index(name = "idx_job_status")
+    private String status = "OPEN";
 
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "created_by")

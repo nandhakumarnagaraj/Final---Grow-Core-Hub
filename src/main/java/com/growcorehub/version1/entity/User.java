@@ -14,6 +14,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -25,9 +28,13 @@ public class User {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@NotBlank(message = "Username is required")
+	@Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
 	@Column(nullable = false, unique = true)
 	private String username;
 
+	@NotBlank(message = "Password is required")
+	@Size(min = 6, message = "Password must be at least 6 characters")
 	@Column(nullable = false)
 	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
 	private String password;
@@ -49,7 +56,10 @@ public class User {
 		this.roles = roles;
 	}
 
+	@Size(max = 100, message = "Full name cannot exceed 100 characters")
 	private String fullName;
+
+	@Size(max = 500, message = "Professional details cannot exceed 500 characters")
 	private String professionalDetails;
 
 	public User(Long id, String username, String password, String email, Set<Role> roles, String fullName,

@@ -2,13 +2,13 @@ package com.growcorehub.version1.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.growcorehub.version1.entity.Job;
 import com.growcorehub.version1.repository.JobRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class JobService {
 	private final JobRepository jobRepository;
 
@@ -24,15 +24,16 @@ public class JobService {
 		return jobRepository.findById(id);
 	}
 
+	@Transactional
 	public Job saveJob(Job job) {
 		return jobRepository.save(job);
 	}
 
+	@Transactional
 	public void deleteJob(Long id) {
 		jobRepository.deleteById(id);
 	}
 
-	// Missing methods required by JobController
 	public List<Job> searchJobs(String searchTerm) {
 		return jobRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(searchTerm);
 	}
