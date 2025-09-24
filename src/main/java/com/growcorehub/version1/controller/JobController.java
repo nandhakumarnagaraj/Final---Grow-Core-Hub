@@ -1,14 +1,10 @@
 package com.growcorehub.version1.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.growcorehub.version1.entity.Job;
-import com.growcorehub.version1.entity.JobApplication;
-import com.growcorehub.version1.entity.User;
-import com.growcorehub.version1.service.JobApplicationService;
 import com.growcorehub.version1.service.JobService;
 import com.growcorehub.version1.service.UserService;
 
@@ -26,8 +22,6 @@ public class JobController {
 		this.jobService = jobService;
 		this.userService = userService;
 	}
-	@Autowired
-	public JobApplicationService jobApplicationService;
 
 	@GetMapping("/")
 	public List<Job> getAllJobs(@RequestParam(required = false) String status,
@@ -120,34 +114,4 @@ public class JobController {
 
 		return ResponseEntity.notFound().build();
 	}
-
-	@PostMapping("/apply/{jobId}")
-	public ResponseEntity<JobApplication> applyForJob(@PathVariable Long jobId,
-			@RequestBody(required = false) JobApplication applicationRequest, Authentication authentication) {
-		String username = authentication.getName();
-		Optional<User> user = userService.findByUsername(username);
-		Optional<Job> job = jobService.getJobById(jobId);
-
-		if (user.isPresent() && job.isPresent()) {
-			// Check if user already applied
-			Optional<JobApplication> existingApplication = jobApplicationService
-					.getApplicationByUserAndJob(user.get().getId(), jobId);
-
-			if (existingApplication.isPresent()) {
-				return ResponseEntity.badRequest().build(); // Already applied
-			}
-
-			JobApplication application = new JobApplication();
-			application.setUser(user.get());
-			application.setJob(job.get());
-			application.setMessage(applicationRequest != null ? applicationRequest.getMessage() : "");
-
-			
-			JobApplication savedApplication = jobApplicationService.applyForJob(application);
-			return ResponseEntity.ok(savedApplication);
-		}
-
-		return ResponseEntity.notFound().build();
-	}
-
 }
