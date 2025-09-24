@@ -1,15 +1,24 @@
 package com.growcorehub.version1.controller;
 
-import org.springframework.boot.autoconfigure.couchbase.CouchbaseProperties.Authentication;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.growcorehub.version1.entity.Job;
 import com.growcorehub.version1.entity.JobApplication;
+import com.growcorehub.version1.entity.User;
 import com.growcorehub.version1.service.JobApplicationService;
 import com.growcorehub.version1.service.JobService;
 import com.growcorehub.version1.service.UserService;
@@ -88,10 +97,11 @@ public class JobApplicationController {
 		return ResponseEntity.notFound().build();
 	}
 
-	// GET APPLICATIONS FOR MY JOB (Job Creator Only)
+// GET APPLICATIONS FOR MY JOB (Job Creator Only)
 	@GetMapping("/job/{jobId}")
 	public ResponseEntity<List<JobApplication>> getApplicationsForJob(@PathVariable Long jobId,
 			Authentication authentication) {
+
 		String username = authentication.getName();
 		Optional<User> user = userService.findByUsername(username);
 		Optional<Job> job = jobService.getJobById(jobId);
@@ -101,10 +111,14 @@ public class JobApplicationController {
 			if (job.get().getCreatedBy().getId().equals(user.get().getId())) {
 				List<JobApplication> applications = jobApplicationService.getApplicationsByJobId(jobId);
 				return ResponseEntity.ok(applications);
+			} else {
+				// Forbidden: user is not the job creator
+				return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 			}
 		}
 
-		return ResponseEntity.forbidden().build();
+		// Either user or job not found
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 	}
 
 	// UPDATE APPLICATION STATUS (Job Creator Only)

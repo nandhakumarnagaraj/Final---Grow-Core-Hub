@@ -1,11 +1,13 @@
 package com.growcorehub.version1.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.growcorehub.version1.entity.Job;
 import com.growcorehub.version1.entity.JobApplication;
+import com.growcorehub.version1.entity.User;
 import com.growcorehub.version1.service.JobApplicationService;
 import com.growcorehub.version1.service.JobService;
 import com.growcorehub.version1.service.UserService;
@@ -24,6 +26,8 @@ public class JobController {
 		this.jobService = jobService;
 		this.userService = userService;
 	}
+	@Autowired
+	public JobApplicationService jobApplicationService;
 
 	@GetMapping("/")
 	public List<Job> getAllJobs(@RequestParam(required = false) String status,
@@ -126,7 +130,7 @@ public class JobController {
 
 		if (user.isPresent() && job.isPresent()) {
 			// Check if user already applied
-			Optional<JobApplication> existingApplication = JobApplicationService
+			Optional<JobApplication> existingApplication = jobApplicationService
 					.getApplicationByUserAndJob(user.get().getId(), jobId);
 
 			if (existingApplication.isPresent()) {
@@ -138,6 +142,7 @@ public class JobController {
 			application.setJob(job.get());
 			application.setMessage(applicationRequest != null ? applicationRequest.getMessage() : "");
 
+			
 			JobApplication savedApplication = jobApplicationService.applyForJob(application);
 			return ResponseEntity.ok(savedApplication);
 		}
